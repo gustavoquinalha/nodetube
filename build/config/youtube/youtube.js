@@ -32,8 +32,7 @@ module.exports = function () {
             var mapped = {
               id: obj.id.videoId,
               name: `${obj.snippet.title}.mp3`,
-              img: obj.snippet.thumbnails.high.url,
-              downloaded: false
+              img: obj.snippet.thumbnails.high.url
             }
             return mapped
           })
@@ -47,7 +46,7 @@ module.exports = function () {
   }
   this.getLists = (callback) => {
     var body = {
-      channelId: `UC3RbuqXHUjECRKgRvOtdJBA`
+      channelId: `UCyEr_DZjqy7j0JmrXcPQZjA`
     }
     request.playlists.search(body)
       .then(
@@ -118,7 +117,7 @@ module.exports = function () {
               listVideoId: obj.id,
               id: obj.snippet.resourceId.videoId,
               img: obj.snippet.thumbnails.high.url,
-              name: obj.snippet.title+'.mp3'
+              name: obj.snippet.title + '.mp3'
             }
             return mapped
           })

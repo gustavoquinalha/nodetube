@@ -8,43 +8,92 @@ const auth = require('./../../../config/auth.json')
 let fireapp = Firebase.initializeApp(auth)
 let youtube = new Request()
 
-module.exports = () => {
-  console.log('Sinchronizing...')
-  const db = fireapp.database().ref('/musics')
-  var playlists = []
-  console.log('Gettig lists...')
-  youtube.getLists(lists => {
-    console.log('Got lists')
-    playlists = lists
-    console.log('Getting lists items...')
-    for (var x of playlists) {
-      youtube.getListItems(x.id, items => {
-        for (var y of items) {
-          db.orderByChild('id').equalTo(y.id).once('value', snapshot => {
-            if (!snapshot.val()) {
-              console.log(`Not found ${y.name}`)
-              db.push({
-                downloaded: true,
-                id: y.id,
-                img: y.img,
-                name: y.name
-              })
-              console.log('Downloading...')
-              var name = y.name.replace(/[#?]/g, '')
-              let download = new You2mp3(y.id)
-              download.download(name)
-                .then(
-                  response => {
+var sync = false
 
-                  },
-                  error => {
-                    console.log(`Failed to download`)
-                  }
-              )
-            }
-          })
-        }
-      })
-    }
+const db = fireapp.database().ref('/musics/rica')
+
+const getData = () => {
+  return new Promise((resolve, reject) => {
+    db.on('value', snapshot => {
+      resolve(snapshot.val())
+    })
   })
+}
+
+const check = (musics, id) => {
+  console.log('Bug')
+  return new Promise((resolve, reject) => {
+    console.log('In bug')
+    console.log(`To bhe compared: ${id}`)
+    for (var x in musics) {
+      console.log(`Comparing: ${musics[x].id}`)
+      if (musics[x].id === id) {
+        resolve(false)
+      }
+    }
+    resolve(true)
+  })
+}
+
+const getListItems = id => {
+  return new Promise((resolve, reject) => {
+    youtube.getListItems(id, items => {
+      resolve(items)
+    })
+  })
+}
+
+const download = (id, name) => {
+  return new Promise((resolve, reject) => {
+    const Download = new You2mp3(id)
+    Download.download(name.replace(/[#?]/g, ''))
+    .then(
+      res => {
+        resolve(res)
+      },
+      err => {
+        resolve(err)
+      })
+  })
+}
+
+const getLists = () => {
+  return new Promise((resolve, reject) => {
+    youtube.getLists(lists => {
+      resolve(lists)
+    })
+  })
+}
+
+const synchronize = async musics => {
+  sync = true
+  var lists = await getLists()
+  console.log(`Got lists`)
+  for (var x of lists) {
+    var items = await getListItems(x.id)
+    console.log(`Got items`)
+    for (var y of items) {
+      var exist = await check(musics, y.id)
+      if (exist) {
+        console.log(`Downloading`)
+        db.push({
+          id: y.id,
+          name: y.name,
+          img: y.img
+        })
+        var downloaded = await download(y.id, y.name)
+        console.log(downloaded)
+      }
+    }
+  }
+  sync = false
+}
+
+module.exports = async () => {
+  if (!sync) {
+    var musics = await getData()
+    console.log(`Got data`)
+    await synchronize(musics)
+  }
+  console.log(`Sinchronize finished...`)
 }
